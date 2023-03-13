@@ -1,6 +1,6 @@
 //import Video, {formatHashtags} from "../models/Video"
 import Video from "../models/Video"
-
+import User from "../models/User"
 
 const fakeUser ={
     username:"Earl",
@@ -50,7 +50,7 @@ export const  home = async(req, res) => {
     //2. promise
     try {
         const videos = await Video.find({}).sort({createdAt:"asc"});
-        return res.render("home", {pageTitle:"Home", fakeUser, videos});
+        return res.render("home", {pageTitle:"Home", videos});
         //return res.render("home", {pageTitle:"Home", fakeUser, videos});
     } catch (error){
         return res.render("server-error", {error});
@@ -60,18 +60,20 @@ export const watch = async(req, res) => {
     //findById() : Id, findOne() : 어떠한 조건
     console.log(`Watch Video #${req.params.id}`);
     const {id} = req.params;
-    const video = await Video.findById(id);
+    const video = await Video.findById(id).populate("owner");
+    //const owner = await User.findById(video.owner);
     //const video = videos[id-1];
-    //return res.render("watch", {pageTitle:`Watching: ${video.title}` , fakeUser, video});
+    //return res.render("videos/watch", {pageTitle:`Watching: ${video.title}` , fakeUser, video});
     
     if(!video) {
-        return res.render("404", {pageTitle: "Video not found.", fakeUser});
+        return res.render("404", {pageTitle: "Video not found."});
     } 
-    return res.render("watch", {pageTitle: video.title , fakeUser, video});
+    return res.render("videos/watch", {pageTitle: video.title , video});
  }
 export const getEdit = async(req, res) => {
     console.log(`Edit Video #${req.params.id}`);
     const {id} = req.params;
+    const {user:{_id}} = req.session;
     const video = await Video.findById(id);
     //const video = videos[id-1];
     //return res.render("edit", {pageTitle:`Editing: ${video.title}`, fakeUser, video});
@@ -79,10 +81,15 @@ export const getEdit = async(req, res) => {
     if(!video) {
         return res.status(404).render("404", {pageTitle: "Video not found.", fakeUser});
     } 
+    console.log(typeof video.owner, typeof _id);
+    if(String(video.owner) !== String(_id)) {
+        return res.status(403).redirect("/");
+    }
     return res.render("edit", {pageTitle: `Edit: ${video.title}` , fakeUser, video});
 }
 export const postEdit = async(req, res) => {
     console.log(req.body);
+    const {user:{_id}} = req.session;
     const {id} = req.params;
     const {title, description, hashtags} = req.body;
     const video = await Video.exists({_id:id});
@@ -90,6 +97,9 @@ export const postEdit = async(req, res) => {
     if(!video) {
         return res.render("404", {pageTitle: "Video not found.", fakeUser});
     } 
+    if(String(video.owner) !== String(_id)) {
+        return res.status(403).redirect("/");
+    }
     await Video.findByIdAndUpdate(id, {
         title,
         description,
@@ -99,9 +109,12 @@ export const postEdit = async(req, res) => {
     return res.redirect(`/videos/${id}`);
 }
 export const getUpload = (req, res) => {
-    return res.render("upload", {pageTitle:`Upload Video` , fakeUser});
+    return res.render("videos/upload", {pageTitle:`Upload Video` , fakeUser});
 }
 export const postUpload = async(req, res) => {
+    const {user: {_id}} = req.session;
+
+    const {path:fileUrl} = req.file;
     // here we will add a video to the videos array.
     const {title, description, hashtags} = req.body;
     // const newVideo = {
@@ -133,9 +146,11 @@ export const postUpload = async(req, res) => {
 
     //2.
     try {
-        await Video.create({//mogoose 자동 datatype validation check
+        const newVideo = await Video.create({//mogoose 자동 datatype validation check
             title,
             description,
+            fileUrl,
+            owner: _id,
             //createdAt : Date.now(),  model default 값 설정
             //hashtags : formatHashtags(hashtags)
             hashtags: Video.formatHashtags(hashtags)
@@ -145,6 +160,11 @@ export const postUpload = async(req, res) => {
             //     rating: 0
             // },
         });
+
+        const user = await User.findById(_id);
+        user.videos.push(newVideo._id);
+        user.save();
+
         return res.redirect("/");
     } catch(error) {
         console.log(error);
@@ -153,6 +173,14 @@ export const postUpload = async(req, res) => {
 }
 export const deleteVideo = async(req, res) => {
     const {id} = req.params;
+    const {user:{_id}} = req.session;
+    if(!video) {
+        return res.render("404", {pageTitle: "Video not found."});
+    }
+    const video =  await Video.findById(id);
+    if(String(video.owner) !== String(_id)) {
+        return res.status(403).redirect("/");
+    }
     //delete video:
     //findOneAndDelete :  이걸로 사용하도록 
     //findOneAndRemove
@@ -171,6 +199,6 @@ export const search = async(req, res) => {
             }
          });
     }
-    return res.render("search",  {pageTitle:`Search`, fakeUser, videos});
+    return res.render("search",  {pageTitle:`Search`, videos});
 }
  

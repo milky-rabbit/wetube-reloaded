@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 //string, number데이터 형 자동변환
 const videoSchema = new mongoose.Schema({
     title: {type:String, required:true, trim:true, maxLength:80}, //title: {type:String}
+    fileUrl: {type:String, requried:true},
     description: {type:String,  required:true, minLength: 20},
     createdAt: {type:Date, required:true, default: Date.now}, //Date.now() 는 즉시 실행시킴. video가 생성될 떄만 실행시켜야 함
     hashtags: [{type: String}],
@@ -17,6 +18,7 @@ const videoSchema = new mongoose.Schema({
         views: {type:Number, default:0, required:true},
         rating: {type:Number, default:0, required:true},
     },
+    owner: {type:mongoose.Schema.Types.ObjectId, required: true, ref:"User"},
 });
 
 

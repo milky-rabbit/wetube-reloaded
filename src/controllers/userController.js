@@ -1,4 +1,5 @@
 import User from "../models/User";
+import Video from "../models/Video";
 import  bcrypt from "bcrypt";
 
 export const getJoin = (req, res) => {
@@ -14,7 +15,7 @@ export const postJoin = async(req, res) => {
             errorMessage : "Password confirmation does not match."
         });    
     }
-    User.exists()
+    //User.exists()
     const exists= await User.exists({$or:[{username}, {email}]});
     if(exists) {
         return res.status(400).render("join", {pageTitle, errorMessage: "This username/email is already taken."});
@@ -109,6 +110,7 @@ export const finishGithubLogin = async (req, res) => {
         console.log(emailData);
         const emailObj = emailData.find((email) => email.primary === true && email.verified === true);
         if(!emailObj) {
+            // set notification
             return res.redirect("/login");
         }
         let user = await User.findOne({email: emailObj.email});
@@ -120,8 +122,8 @@ export const finishGithubLogin = async (req, res) => {
                 name:userData.name,
                 username: userData.login,
                 email:emailObj.email,
-                password: "",
                 socialOnly: true,
+                password: "",
                 location:userData.location,
             });
         }
@@ -137,6 +139,76 @@ export const logout = (req, res) => {
     req.session.destroy();
     return res.redirect("/");
 }
-export const see = (req, res) => res.send("See User");
-export const edit = (req, res) => res.send("Edit User");
+export const getEdit = (req, res) => res.render("users/edit-profile", {pageTitle: "Edit Profile"});
+export const postEdit = async (req, res) => {
+    const {session: {user: {_id, avatarUrl}},
+            body: {name, email, username, location},
+            file} = req;
+    //const id = req.session.user.id;
+    //const {name, email, username, location} = req.body;
+    
+    console.log(file);
+    //findByIdAndUpdate : 먼저 기존 데이터 반환후 업데이트
+    //but! new:true 하면 업데이트 후의 데이터 반환
+    const updateUser = await User.findByIdAndUpdate(_id, {
+        avatarUrl : file? file.path : avatarUrl,
+        name, 
+        email, 
+        username, 
+        location}, {new:true});
+
+     //session 저장
+     //1. 
+    //  req.session.user = {
+    //     ...req.session.user,
+    //     name,
+    //     email,
+    //     username,
+    //     location,
+    //  };
+    //2. 
+    req.session.user = updateUser;
+
+    return res.redirect("/users/edit");
+};
+
+export const getChangePassword = (req, res) => {
+    if(req.session.user.socialOnly) {
+        return res.redirect("/");
+    }
+    return res.render("users/change-password", {pageTitle: "Change Password"});
+}
+export const postChangePassword = async (req, res) => {
+    const {session: {user: {_id, password}},
+            body: {oldPassword, newPassword, newPasswordConfirmation}} = req;
+    const user = await User.findById(_id);
+    const ok = await bcrypt.compare(oldPassword, user.password);
+    if(!ok) {
+        return res.status(400).render("users/change-password"
+        , {pageTitle: "Change Password", errorMessage:"The current password is incorrect."});
+    }
+
+    if(newPassword !== newPasswordConfirmation) {
+        return res.status(400).render("users/change-password"
+        , {pageTitle: "Change Password", errorMessage:"The password does not match the confirmation."});
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    //send notification
+    return res.redirect("/users/logout");
+}
+
+export const see = async (req, res) => {
+    const {id} = req.params;
+    const user = await User.findById(id).populate("videos");
+    if(!user) {
+        return res.status(404).render("404", {pageTItle: "User not found."})
+    }
+    //const videos = await Video.find({owner: user._id});
+    return res.render("users/profile", {pageTitle: `${user.name}의 Profile`,
+     user,
+    });
+}
 //export const remove = (req, res) => res.send("Remove User");//delete 예약어

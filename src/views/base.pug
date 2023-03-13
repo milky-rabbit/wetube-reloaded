@@ -3,6 +3,7 @@ html(lang="ko")
     head
         title #{pageTitle} | #{siteName}
         link(rel="stylesheet" href="https://unpkg.com/mvp.css")
+        link(rel="stylesheet" href="/static/css/styles.css")
     body
         header
             //- if fakeUser.loggedIn
@@ -20,24 +21,25 @@ html(lang="ko")
                 ul 
                     li 
                         a(href="/") Home
-                    if loggedIn 
+                    if loggedIn
+                        li 
+                            a(href="/videos/upload") Upload Video 
+                        li   
+                            a(href=`/users/${loggedInUser._id}`) My Profile
+                        li 
+                            a(href="/users/edit") Edit Profile
                         li 
                             a(href="/users/logout") Logout
-                        li   
-                            a(href="/my-profile") #{loggedInUser.username}의 Profile
-                        if loggedInUser.avatarUrl 
-                            li    
-                                img(src=loggedInUser.avatarUrl, style="width:50px; height:50px; border-radius:50%")
                     else
                         li 
                             a(href="/join") Join 
                         li 
                             a(href="/login") Login 
                     li 
-                        a(href="/search") Search
-                    li 
-                        a(href="/videos/upload") Upload Video
+                        a(href="/search") Search           
 
         main
             block content
-    include partials/footer.pug 
+    include partials/footer.pug
+
+    script(src="/static/js/main.js")

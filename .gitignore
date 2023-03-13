@@ -1,4 +1,7 @@
 /node_modules
 .env
+/uploads
+.DS_Store
+/assets
 Setup_1강2강.txt
 server_3강.js
