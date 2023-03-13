@@ -33,6 +33,21 @@ mongo DB https://www.mongodb.com/
 monoose https://mongoosejs.com/
 - nodeJS와 mongoDB 연결
 
+
+webpack 설치
+1. webpack CLI설치
+npm i webpack webpack-cli --save-dev or npm i webpack webpack-cli -D
+2. webpack.config.js 파일 생성
+3. babel-loader 설치
+npm install -D babel-loader
+4. scss-loader 설치 : scss를 css로 변환
+npm install sass-loader sass webpack --save-dev
+5. css-loader 설치 : @import, url() 해석
+npm install --save-dev css-loader
+6. style-loader 설치 : css를 DOM에 주입
+npm install --save-dev style-loader
+7. MiniCssExtractPlugin : 해당 코드를 다른 파일로 분리
+npm install --save-dev mini-css-extract-plugin
 */
 import express from "express";
 import morgan from "morgan";
@@ -99,9 +114,13 @@ app.use(localsMiddleware);//순서 중요. session 다음이어야 함.
 //    return res.send(`${req.session.id}\n${req.session.potato}`);
 // });
 
+
 /*
  * router call 
  */
+//argument : 디렉토리 이름, 이 ㄷ렉토리 안에 있는 파일들의 접근가능하도록.
+app.use("/uploads", express.static("uploads"));
+app.use("/static", express.static("assets"));
 app.use("/", rootRouter);
 app.use("/videos", videoRouter);
 app.use("/users", userRouter);
